@@ -55,7 +55,16 @@ export async function register(req, res) {
 export async function verifyEmail(req,res) {
     const {token} = req.query;
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+
+    try{
+        const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    }catch(err){
+        return res.status(400).json({
+            message:"invalid token",
+            success:false,
+            err:"invalid token"
+        })
+    }
 
     const user = await userModel.findOne({email:decoded.email})
 
@@ -77,8 +86,61 @@ export async function verifyEmail(req,res) {
     <h1>Email verified successfully!</h1>
     <p>You can now login to your account.</p>
     <a href="http://localhost:3000/login">Login</a>
-    
+
     `
 
     res.send(html)
+}
+
+export async function login(req,res) {
+    const user = await userModel.findOne({email:req.body.email})
+
+
+
+
+ const isPasswordmatch = await user.comparePassword(req.body.password)
+
+ if(!isPasswordmatch){
+    return res.status(400).json({
+        message:"invalid email or password",
+        success:false,
+        err:"incorrect password."
+    })
+ }
+
+    if(!user){
+        return res.status(400).json({
+            message:"invalid email or password",
+            success:false,
+            err:"incorrect password."
+        })
+    }
+
+
+
+    if(!user.verified){
+        return res.status(400).json({
+            message:"please verify your email before logging in.",
+            success:false,
+            err:"email not verified."
+        })
+    }
+    
+    const token = jwt.sign({
+        id:user._id,
+        username:user.username,
+        email:user.email
+    },process.env.JWT_SECRET,{expiresIn:"7d"})
+
+    res.cookie("token",token)
+
+    res.status(200).json({
+        message:"user logged in successfully",
+        success:true,
+        user:{
+            id:user._id,
+            username:user.username,
+            email:user.email
+        }
+    })
 }
