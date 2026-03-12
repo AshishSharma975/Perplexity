@@ -144,3 +144,23 @@ export async function login(req,res) {
         }
     })
 }
+
+export async function getme(req,res) {
+    const userid = req.user.id
+
+    const user = await userModel.findById(userid).select("-password")
+
+    if(!user){
+        return res.status(404).json({
+            message:"user not found",
+            success:false,
+            err:"user not found"
+        })
+    }
+
+    res.status(200).json({
+        message:"user fetched successfully",
+        success:true,
+        user
+    })
+}
