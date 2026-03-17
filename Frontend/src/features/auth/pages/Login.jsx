@@ -1,23 +1,48 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-
+import { Link, useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "../hook/useauth";
+import { useSelector } from "react-redux";
 const Login = () => {
+
+  const navigate = useNavigate();
+  const { handleLogin } = useAuth();
+
+  const user = useSelector(state => state.auth.user);
+  const loading = useSelector(state => state.auth.loading);
 
   const [formData, setFormData] = useState({
     email: "",
     password: ""
   });
 
+  if (user) {
+    return <Navigate to="/" />;
+  }
+
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(formData);
+
+    if (!formData.email || !formData.password) {
+      alert("Please fill all fields");
+      return;
+    }
+
+    try {
+      await handleLogin(formData);
+      navigate("/");
+    } catch (error) {
+      console.error("Login Error:", error);
+      alert("Login failed");
+    }
   };
 
   return (
@@ -25,7 +50,7 @@ const Login = () => {
 
       <form
         onSubmit={handleSubmit}
-        className="bg-neutral-900 border border-sky-500/30 p-8 rounded-xl w-[350px]"
+        className="bg-neutral-900 border border-sky-500/30 p-8 rounded-xl w-[350px] shadow-lg"
       >
 
         <h2 className="text-2xl font-bold text-center text-sky-400 mb-6">
@@ -52,9 +77,10 @@ const Login = () => {
 
         <button
           type="submit"
-          className="w-full bg-sky-500 hover:bg-sky-400 text-black font-semibold py-2 rounded"
+          disabled={loading}
+          className="w-full bg-sky-500 hover:bg-sky-400 text-black font-semibold py-2 rounded transition"
         >
-          Login
+          {loading ? "Logging in..." : "Login"}
         </button>
 
         <p className="text-gray-400 text-sm mt-4 text-center">
