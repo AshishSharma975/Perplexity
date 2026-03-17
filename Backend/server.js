@@ -1,7 +1,7 @@
 import "dotenv/config";
 import app from "./src/app.js";
 import connectDB from "./src/config/database.js";
-import { TestAi } from "./src/services/ai.service.js";
+import { generateResponse } from "./src/services/ai.service.js";
 import http from "http";
 import { initServerSocket } from "./src/sockets/server.socket.js";
 
@@ -17,7 +17,6 @@ connectDB().catch((err) => {
   process.exit(1);
 });
 
-TestAi()
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
