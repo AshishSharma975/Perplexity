@@ -1,50 +1,60 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { ChatMistralAI } from "@langchain/mistralai";
+import { HumanMessage, SystemMessage, AIMessage, createAgent } from "langchain";
 
 const geminiModel = new ChatGoogleGenerativeAI({
- model: "gemini-1.5-flash",
+  model: "gemini-2.5-flash-lite", 
   apiKey: process.env.GEMINI_API_KEY
 });
 
 const mistralModel = new ChatMistralAI({
-  model: "mistral-small-latest",
+  model: "mistral-medium-latest",
   apiKey: process.env.MISTRAL_API_KEY
 });
 
+const agent = createAgent({
+  model: geminiModel,
+});
 
-export async function generateResponse(message) {
+export async function generateResponse(messages) {
   try {
-    const response = await geminiModel.invoke([
-      new HumanMessage(message)
-    ]);
+    const response = await agent.invoke({
+      messages: [
+        new SystemMessage(`
+You are a helpful and precise assistant.
+If you don't know the answer, say you don't know.
+        `),
 
-    return response.content; 
+        
+        ...messages.map(msg => {
+          if (msg.role === "user") {
+            return new HumanMessage(msg.content);
+          } else {
+            return new AIMessage(msg.content);
+          }
+        }),
+      ],
+    });
+
+  
+    return response.messages[response.messages.length - 1].content;
 
   } catch (error) {
-    console.log("Gemini failed:", error.message);
-
-    try {
-      const response = await mistralModel.invoke(message);
-      return response.content;
-    } catch (err) {
-      console.log("Mistral also failed:", err.message);
-      return "AI is busy, try again later.";
-    }
+    console.log("AI Error:", error.message);
+    return "AI is busy, try again later.";
   }
 }
-
 
 export async function generateChatTitle(message) {
   try {
     const response = await mistralModel.invoke([
-      new SystemMessage(
-        "You generate short 3-5 word chat titles only."
-      ),
-      new HumanMessage(`Message: ${message}`)
+      new SystemMessage(`
+Generate a short 2-4 word chat title.
+      `),
+      new HumanMessage(message)
     ]);
 
-    return response.content; 
+    return response.content;
 
   } catch (error) {
     console.log("Title error:", error.message);
