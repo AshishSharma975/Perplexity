@@ -1,90 +1,110 @@
-{/* 🌈 Background Blob */}
-<div className="absolute inset-0 -z-10 flex justify-center items-center">
-  <div className="w-[600px] h-[600px] bg-gradient-to-r from-purple-400 via-pink-300 to-blue-300 rounded-full blur-3xl opacity-40 animate-pulse"></div>
-</div>
+import React, { useEffect, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import { useSelector } from 'react-redux'
+import { useChat } from '../hooks/useChat'
+import remarkGfm from 'remark-gfm'
 
-{/* 🧠 MAIN */}
-<div className="flex flex-col items-center justify-center h-full px-4">
 
-  {/* 👇 IF NO CHAT */}
-  {messages.length === 0 ? (
-    <>
-      <h2 className="text-gray-500">Hey {user?.user?.name || "Alex"}</h2>
+const Dashboard = () => {
+  const chat = useChat()
+  const [ chatInput, setChatInput ] = useState('')
+  const chats = useSelector((state) => state.chat.chats)
+  const currentChatId = useSelector((state) => state.chat.currentChatId)
 
-      <h1 className="text-4xl md:text-5xl font-semibold mt-2 mb-6 text-center">
-        How can Aurora help you today?
-      </h1>
+  useEffect(() => {
+    chat.initializeSocketConnection()
+    chat.handleGetChats()
+  }, [])
 
-      {/* INPUT */}
-      <div className="w-full max-w-2xl bg-black text-white rounded-3xl p-5 shadow-xl">
+  const handleSubmitMessage = (event) => {
+    event.preventDefault()
 
-        <input
-          type="text"
-          placeholder="Type your prompt..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          className="w-full bg-transparent outline-none text-lg"
-        />
+    const trimmedMessage = chatInput.trim()
+    if (!trimmedMessage) {
+      return
+    }
 
-        <div className="flex justify-between items-center mt-4">
-          <span className="text-xs text-gray-400">
-            Upload or type your idea
-          </span>
+    chat.handleSendMessage({ message: trimmedMessage, chatId: currentChatId })
+    setChatInput('')
+  }
 
-          <button
-            onClick={handleSend}
-            className="bg-white text-black w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition"
-          >
-            ➤
-          </button>
-        </div>
-      </div>
-    </>
-  ) : (
-    /* 💬 CHAT UI CENTER */
-    <div className="w-full max-w-3xl flex flex-col gap-4">
+  const openChat = (chatId) => {
+    chat.handleOpenChat(chatId,chats)
+  }
 
-      {messages.map((msg, i) => (
-        <div
-          key={i}
-          className={`flex ${
-            msg.role === "user"
-              ? "justify-end"
-              : "justify-start"
-          }`}
-        >
-          <div
-            className={`px-5 py-3 rounded-2xl max-w-xl text-sm shadow-md ${
-              msg.role === "user"
-                ? "bg-black text-white"
-                : "bg-white/70 backdrop-blur-md"
-            }`}
-          >
-            {msg.content}
+  return (
+    <main className='min-h-screen w-full bg-[#07090f] p-3 text-white md:p-5'>
+      <section className='mx-auto flex h-[calc(100vh-1.5rem)] w-full gap-4 rounded-3xl border   p-1 md:h-[calc(100vh-2.5rem)] md:gap-6 md:p-1 border-none'>
+        <aside className='hidden h-full w-72 shrink-0 rounded-3xl border  bg-[#080b12] p-4 md:flex md:flex-col'>
+          <h1 className='mb-5 text-3xl font-semibold tracking-tight'>Perplexity</h1>
+
+          <div className='space-y-2'>
+            {Object.values(chats).map((chat,index) => (
+              <button
+                onClick={()=>{openChat(chat.id)}}
+                key={index}
+                type='button'
+                className='w-full cursor-pointer rounded-xl border border-white/60 bg-transparent px-3 py-2 text-left text-base font-medium text-white/90 transition hover:border-white hover:text-white'
+              >
+                {chat.title}
+              </button>
+            ))}
           </div>
-        </div>
-      ))}
+        </aside>
 
-      {/* 🔥 Input stays center */}
-      <div className="mt-6 bg-black text-white rounded-2xl p-4 flex items-center gap-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask anything..."
-          className="flex-1 bg-transparent outline-none"
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-        />
+        <section className='relative max-w-3/5 mx-auto flex h-full min-w-0 flex-1 flex-col gap-4'>
 
-        <button
-          onClick={handleSend}
-          className="bg-white text-black w-10 h-10 rounded-full flex items-center justify-center"
-        >
-          ➤
-        </button>
-      </div>
+          <div className='messages flex-1 space-y-3 overflow-y-auto pr-1 pb-30'>
+            {chats[ currentChatId ]?.messages.map((message) => (
+              <div
+                key={message.id}
+                className={`max-w-[82%] w-fit rounded-2xl px-4 py-3 text-sm md:text-base ${message.role === 'user'
+                    ? 'ml-auto rounded-br-none bg-white/12 text-white'
+                    : 'mr-auto border-none text-white/90'
+                  }`}
+              >
+                {message.role === 'user' ? (
+                  <p>{message.content}</p>
+                ) : (
+                  <ReactMarkdown
+                    components={{
+                      p: ({ children }) => <p className='mb-2 last:mb-0'>{children}</p>,
+                      ul: ({ children }) => <ul className='mb-2 list-disc pl-5'>{children}</ul>,
+                      ol: ({ children }) => <ol className='mb-2 list-decimal pl-5'>{children}</ol>,
+                      code: ({ children }) => <code className='rounded bg-white/10 px-1 py-0.5'>{children}</code>,
+                      pre: ({ children }) => <pre className='mb-2 overflow-x-auto rounded-xl bg-black/30 p-3'>{children}</pre>
+                    }}
+                    remarkPlugins={[remarkGfm]}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                )}
+              </div>
+            ))}
+          </div>
 
-    </div>
-  )}
+          <footer className='rounded-3xl w-full absolute bottom-2 border border-white/60 bg-[#080b12] p-4 md:p-5'>
+            <form onSubmit={handleSubmitMessage} className='flex flex-col gap-3 md:flex-row'>
+              <input
+                type='text'
+                value={chatInput}
+                onChange={(event) => setChatInput(event.target.value)}
+                placeholder='Type your message...'
+                className='w-full rounded-2xl border border-white/50 bg-transparent px-4 py-3 text-lg text-white outline-none transition placeholder:text-white/45 focus:border-white/90'
+              />
+              <button
+                type='submit'
+                disabled={!chatInput.trim()}
+                className='rounded-2xl border border-white/60 px-6 py-3 text-lg font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50'
+              >
+                Send
+              </button>
+            </form>
+          </footer>
+        </section>
+      </section>
+    </main>
+  )
+}
 
-</div>
+export default Dashboard
