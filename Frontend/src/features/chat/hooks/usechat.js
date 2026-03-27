@@ -1,9 +1,25 @@
-import { initilizeSocketConnection } from "../service/chat.socket";
-import { useEffect } from "react";
+import { initializeSocketConnection } from "../service/chat.socket";
 
+const useChat = () => {
 
-export const useChat = () => {
-   return{
-    initilizeSocketConnection
-   }
-}
+  const handleGetChats = () => {
+    console.log("GET CHATS");
+  };
+
+  const handleSendMessage = ({ message, chatId }) => {
+    console.log("SEND", message, chatId);
+  };
+
+  const handleOpenChat = (chatId, chats) => {
+    console.log("OPEN CHAT", chatId);
+  };
+
+  return {
+    initializeSocketConnection,
+    handleGetChats,
+    handleSendMessage,
+    handleOpenChat
+  };
+};
+
+export default useChat;
